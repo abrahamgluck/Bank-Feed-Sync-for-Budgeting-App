@@ -6,7 +6,7 @@ const app = express();
 
 app.get('/test-token', async (req, res) => {
   try {
-    const response = await axios.post('https://api.finicity.com/aggregation/v2/partners/authentication', null, {
+    const response = await axios.post('https://sandbox.api.mastercard.com/open-banking-connect/v2/partners/authentication', null, {
       headers: {
         'Finicity-App-Key': process.env.FINICITY_APP_KEY,
         'Content-Type': 'application/json'
