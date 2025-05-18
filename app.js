@@ -20,7 +20,7 @@ app.get('/test-token', async (req, res) => {
     console.log('✅ Token:', response.data);
     res.json(response.data);
   } catch (error) {
-    console.error('❌ Token Error:', error.response?.data || error.message);
+    console.error('❌ Token Error:', JSON.stringify(error.response?.data, null, 2) || error.message);
     res.status(500).json({ error: 'Failed to get token' });
   }
 });
