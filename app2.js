@@ -1,10 +1,14 @@
 const express = require('express');
+const path = require('path');
 const axios = require('axios');
 require('dotenv').config();
 
 const app = express();
 
 app.use(express.json());
+
+/* === Serve the SimpleChex SEO landing page and static assets === */
+app.use(express.static(path.join(__dirname, 'public')));
 
 const PLAID_BASE_URL = 'https://sandbox.plaid.com';
 

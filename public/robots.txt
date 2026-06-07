@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Block backend API routes from indexing
+Disallow: /plaid/
+Disallow: /test-token
+
+Sitemap: https://www.simplechex.com/sitemap.xml
