@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Order Fulfillment — End of Day</title>
+<style>
+  :root {
+    --bg: #0e1726;
+    --panel: #16213a;
+    --panel-2: #1c2a47;
+    --line: #26365a;
+    --text: #e8eefc;
+    --muted: #93a4c4;
+    --accent: #4f8cff;
+    --green: #2ec28a;
+    --amber: #f5b14c;
+    --red: #ff5d6c;
+    --purple: #9b7bff;
+    --cyan: #36c5d4;
+    --shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 80% -10%, #1b2c4d 0%, var(--bg) 55%);
+    color: var(--text);
+    font: 14px/1.45 "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  a { color: var(--accent); }
+
+  header.top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 22px 32px; gap: 16px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(90deg, rgba(79,140,255,.10), rgba(155,123,255,.06));
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand .logo {
+    width: 42px; height: 42px; border-radius: 11px;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
+    display: grid; place-items: center; font-size: 22px; box-shadow: var(--shadow);
+  }
+  .brand h1 { font-size: 19px; margin: 0; letter-spacing: .2px; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+  .top-actions { display: flex; align-items: center; gap: 12px; }
+  .clock { color: var(--muted); font-size: 12.5px; text-align: right; }
+  .btn {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    padding: 9px 14px; border-radius: 9px; cursor: pointer; font-size: 13px;
+  }
+  .btn:hover { border-color: var(--accent); }
+
+  main { padding: 24px 32px 56px; max-width: 1500px; margin: 0 auto; }
+
+  /* KPI cards */
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .kpi {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 16px 16px 14px; box-shadow: var(--shadow); position: relative; overflow: hidden;
+  }
+  .kpi::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    background: var(--accent);
+  }
+  .kpi.green::before { background: var(--green); }
+  .kpi.amber::before { background: var(--amber); }
+  .kpi.red::before { background: var(--red); }
+  .kpi.purple::before { background: var(--purple); }
+  .kpi.cyan::before { background: var(--cyan); }
+  .kpi .label { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .5px; }
+  .kpi .value { font-size: 30px; font-weight: 700; margin-top: 6px; }
+  .kpi .sub { color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+  .grid { display: grid; grid-template-columns: 1.1fr 1fr 1fr; gap: 16px; margin-top: 18px; }
+  .card {
+    background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 18px; box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 14px; font-size: 14.5px; letter-spacing: .3px; }
+  .card h2 .hint { color: var(--muted); font-weight: 400; font-size: 12px; }
+
+  /* Donut */
+  .donut-wrap { display: flex; align-items: center; gap: 18px; }
+  .donut { width: 150px; height: 150px; border-radius: 50%; position: relative; flex: none; }
+  .donut::after {
+    content: ""; position: absolute; inset: 26px; background: var(--panel); border-radius: 50%;
+  }
+  .donut .center {
+    position: absolute; inset: 0; display: grid; place-items: center; text-align: center; z-index: 1;
+  }
+  .donut .center b { font-size: 26px; display: block; }
+  .donut .center span { color: var(--muted); font-size: 11px; }
+  .legend { display: flex; flex-direction: column; gap: 9px; flex: 1; }
+  .legend .row { display: flex; align-items: center; gap: 9px; font-size: 13px; cursor: pointer; }
+  .legend .row:hover { color: #fff; }
+  .legend .dot { width: 11px; height: 11px; border-radius: 3px; flex: none; }
+  .legend .row .n { margin-left: auto; font-variant-numeric: tabular-nums; color: var(--muted); }
+
+  /* Aging bars */
+  .bars { display: flex; flex-direction: column; gap: 14px; }
+  .bar-row .bl { display: flex; justify-content: space-between; font-size: 12.5px; margin-bottom: 6px; color: var(--muted); }
+  .bar-track { height: 12px; background: var(--panel-2); border-radius: 8px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 8px; }
+
+  /* Customer table */
+  .cust { max-height: 300px; overflow: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 9px 10px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; position: sticky; top: 0; background: var(--panel); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr:hover td { background: rgba(79,140,255,.06); }
+
+  /* Orders section */
+  .orders-head { display: flex; align-items: center; justify-content: space-between; margin: 22px 0 12px; flex-wrap: wrap; gap: 12px; }
+  .orders-head h2 { margin: 0; font-size: 16px; }
+  .filters { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filters select, .filters input {
+    background: var(--panel-2); color: var(--text); border: 1px solid var(--line);
+    padding: 8px 10px; border-radius: 8px; font-size: 13px;
+  }
+  .filters input { min-width: 180px; }
+
+  .pill { display: inline-block; padding: 3px 9px; border-radius: 999px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+  .pill.new { background: rgba(79,140,255,.16); color: #8fb6ff; }
+  .pill.oos { background: rgba(255,93,108,.16); color: #ff97a1; }
+  .pill.wh { background: rgba(54,197,212,.16); color: #79dbe6; }
+  .pill.neg { background: rgba(155,123,255,.18); color: #c0acff; }
+  .pill.other { background: rgba(245,177,76,.16); color: #f7c884; }
+  .pill.shipped { background: rgba(46,194,138,.16); color: #76e0b5; }
+
+  .alert-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .alert-normal { background: var(--green); }
+  .alert-watch { background: var(--amber); }
+  .alert-high { background: var(--red); box-shadow: 0 0 0 4px rgba(255,93,108,.18); }
+
+  .stock { font-size: 12.5px; }
+  .stock.in { color: var(--green); }
+  .stock.low { color: var(--amber); }
+  .stock.out { color: var(--red); }
+
+  .table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: hidden; }
+  .table-scroll { max-height: 560px; overflow: auto; }
+  .age-strong { color: var(--red); font-weight: 700; }
+  .muted { color: var(--muted); }
+  .right { text-align: right; }
+  .count-note { color: var(--muted); font-size: 12.5px; }
+
+  @media (max-width: 1150px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .grid { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 620px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    main, header.top { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <div class="logo">📦</div>
+      <div>
+        <h1>Order Fulfillment — End of Day</h1>
+        <p>Open orders not yet shipped, and why they're stuck</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="clock" id="clock"></div>
+      <button class="btn" id="refresh">↻ Refresh</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="kpis" id="kpis"></section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Why orders are pending <span class="hint">— click a reason to filter</span></h2>
+        <div class="donut-wrap">
+          <div class="donut" id="donut">
+            <div class="center"><b id="donut-total">0</b><span>pending</span></div>
+          </div>
+          <div class="legend" id="legend"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>How long they've been open <span class="hint">— aging of pending orders</span></h2>
+        <div class="bars" id="aging"></div>
+      </div>
+
+      <div class="card">
+        <h2>Open orders per customer <span class="hint">— not yet shipped</span></h2>
+        <div class="cust">
+          <table>
+            <thead>
+              <tr><th>Customer</th><th class="num">Open</th><th class="num">Units</th><th class="num">Value</th><th class="num">High</th><th class="num">Oldest</th></tr>
+            </thead>
+            <tbody id="cust-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <div class="orders-head">
+      <h2>Open orders <span class="count-note" id="order-count"></span></h2>
+      <div class="filters">
+        <select id="f-status">
+          <option value="PENDING">Pending only</option>
+          <option value="">All statuses</option>
+          <option value="SHIPPED">Shipped</option>
+        </select>
+        <select id="f-reason">
+          <option value="">All reasons</option>
+          <option value="NEW">New (just received)</option>
+          <option value="OUT_OF_STOCK">Out of stock</option>
+          <option value="AT_WAREHOUSE">At warehouse</option>
+          <option value="WAREHOUSE_NEGLECT">Warehouse neglect</option>
+          <option value="OTHER">Other holds</option>
+        </select>
+        <select id="f-alert">
+          <option value="">Any alert</option>
+          <option value="high">High alert</option>
+          <option value="watch">Watch</option>
+          <option value="normal">Normal</option>
+        </select>
+        <input id="f-search" type="text" placeholder="Search order / customer…" />
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Alert</th>
+              <th>Order</th>
+              <th>Customer</th>
+              <th class="num">Units</th>
+              <th class="num">Value</th>
+              <th>Stock</th>
+              <th>Reason</th>
+              <th>Dispatched to WH</th>
+              <th class="num">Open</th>
+            </tr>
+          </thead>
+          <tbody id="orders-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+<script>
+var REASONS = {
+  NEW:               { label: 'New (just received)', cls: 'new',     color: '#4f8cff' },
+  OUT_OF_STOCK:      { label: 'Out of stock',        cls: 'oos',     color: '#ff5d6c' },
+  AT_WAREHOUSE:      { label: 'At warehouse',        cls: 'wh',      color: '#36c5d4' },
+  WAREHOUSE_NEGLECT: { label: 'Warehouse neglect',   cls: 'neg',     color: '#9b7bff' },
+  OTHER:             { label: 'Other holds',         cls: 'other',   color: '#f5b14c' }
+};
+
+var allOrders = [];
+
+function fmtMoney(n) {
+  return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+function fmtTime(iso) {
+  if (!iso) return '<span class="muted">—</span>';
+  var d = new Date(iso);
+  return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+function fmtAge(h) {
+  var txt = h < 1 ? Math.round(h * 60) + 'm' : h.toFixed(1) + 'h';
+  return h > 24 ? '<span class="age-strong">' + txt + '</span>' : txt;
+}
+
+function renderKpis(s) {
+  var t = s.totals;
+  var cards = [
+    { cls: '',       label: 'Orders today',     value: t.orders,            sub: t.shipped + ' shipped' },
+    { cls: 'amber',  label: 'Pending / open',   value: t.pending,           sub: fmtMoney(t.openValue) + ' open value' },
+    { cls: 'red',    label: 'High alert',       value: t.highAlert,         sub: 'open &gt; 24h' },
+    { cls: 'red',    label: 'Out of stock',     value: t.outOfStock,        sub: 'held from shipping' },
+    { cls: 'cyan',   label: 'At warehouse',     value: t.atWarehouse,       sub: 'awaiting pick/pack' },
+    { cls: 'purple', label: 'Warehouse neglect',value: t.neglected,         sub: 'sitting too long' }
+  ];
+  document.getElementById('kpis').innerHTML = cards.map(function (c) {
+    return '<div class="kpi ' + c.cls + '"><div class="label">' + c.label + '</div>' +
+           '<div class="value">' + c.value + '</div><div class="sub">' + c.sub + '</div></div>';
+  }).join('');
+}
+
+function renderDonut(s) {
+  var entries = Object.keys(REASONS).map(function (k) {
+    return { key: k, label: REASONS[k].label, color: REASONS[k].color, n: s.byReason[k] || 0, cls: REASONS[k].cls };
+  });
+  var total = entries.reduce(function (a, b) { return a + b.n; }, 0) || 1;
+  var acc = 0, stops = [];
+  entries.forEach(function (e) {
+    var start = acc / total * 360;
+    acc += e.n;
+    var end = acc / total * 360;
+    stops.push(e.color + ' ' + start.toFixed(1) + 'deg ' + end.toFixed(1) + 'deg');
+  });
+  document.getElementById('donut').style.background = 'conic-gradient(' + stops.join(',') + ')';
+  document.getElementById('donut-total').textContent = s.totals.pending;
+
+  document.getElementById('legend').innerHTML = entries.map(function (e) {
+    var pct = Math.round(e.n / total * 100);
+    return '<div class="row" data-reason="' + e.key + '">' +
+           '<span class="dot" style="background:' + e.color + '"></span>' + e.label +
+           '<span class="n">' + e.n + ' · ' + pct + '%</span></div>';
+  }).join('');
+  Array.prototype.forEach.call(document.querySelectorAll('.legend .row'), function (row) {
+    row.addEventListener('click', function () {
+      document.getElementById('f-reason').value = row.getAttribute('data-reason');
+      document.getElementById('f-status').value = 'PENDING';
+      applyFilters();
+    });
+  });
+}
+
+function renderAging(s) {
+  var buckets = [
+    { k: '0-6h',   color: '#2ec28a' },
+    { k: '6-12h',  color: '#f5b14c' },
+    { k: '12-24h', color: '#ff8a4c' },
+    { k: '24h+',   color: '#ff5d6c' }
+  ];
+  var max = Math.max.apply(null, buckets.map(function (b) { return s.aging[b.k] || 0; })) || 1;
+  document.getElementById('aging').innerHTML = buckets.map(function (b) {
+    var n = s.aging[b.k] || 0;
+    var w = Math.round(n / max * 100);
+    return '<div class="bar-row"><div class="bl"><span>' + b.k + ' open</span><span>' + n + ' orders</span></div>' +
+           '<div class="bar-track"><div class="bar-fill" style="width:' + w + '%;background:' + b.color + '"></div></div></div>';
+  }).join('');
+}
+
+function renderCustomers(s) {
+  document.getElementById('cust-body').innerHTML = s.customers.map(function (c) {
+    var high = c.highAlert > 0 ? '<span class="age-strong">' + c.highAlert + '</span>' : '0';
+    return '<tr><td>' + c.customer + '</td><td class="num">' + c.open + '</td><td class="num">' + c.units +
+           '</td><td class="num">' + fmtMoney(c.value) + '</td><td class="num">' + high +
+           '</td><td class="num">' + c.oldestHours.toFixed(0) + 'h</td></tr>';
+  }).join('');
+}
+
+function renderOrders(list) {
+  document.getElementById('order-count').textContent = '— ' + list.length + ' shown';
+  if (!list.length) {
+    document.getElementById('orders-body').innerHTML = '<tr><td colspan="9" class="muted" style="padding:24px;text-align:center">No orders match these filters.</td></tr>';
+    return;
+  }
+  document.getElementById('orders-body').innerHTML = list.map(function (o) {
+    var reason = o.reason ? REASONS[o.reason] : { label: 'Shipped', cls: 'shipped' };
+    var stockCls = o.stock === 'in_stock' ? 'in' : (o.stock === 'low' ? 'low' : 'out');
+    var stockTxt = o.stock === 'in_stock' ? 'In stock' : (o.stock === 'low' ? 'Low' : 'Out of stock');
+    return '<tr>' +
+      '<td><span class="alert-dot alert-' + o.alert + '" title="' + o.alert + '"></span></td>' +
+      '<td><b>' + o.id + '</b></td>' +
+      '<td>' + o.customer + '</td>' +
+      '<td class="num">' + o.units + '</td>' +
+      '<td class="num">' + fmtMoney(o.value) + '</td>' +
+      '<td><span class="stock ' + stockCls + '">' + stockTxt + '</span></td>' +
+      '<td><span class="pill ' + reason.cls + '">' + reason.label + '</span></td>' +
+      '<td>' + fmtTime(o.dispatchedAt) + (o.warehouse ? ' <span class="muted">· ' + o.warehouse + '</span>' : '') + '</td>' +
+      '<td class="num">' + fmtAge(o.openHours) + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+function applyFilters() {
+  var status = document.getElementById('f-status').value;
+  var reason = document.getElementById('f-reason').value;
+  var alert = document.getElementById('f-alert').value;
+  var q = document.getElementById('f-search').value.trim().toLowerCase();
+  var list = allOrders.filter(function (o) {
+    if (status && o.status !== status) return false;
+    if (reason && o.reason !== reason) return false;
+    if (alert && o.alert !== alert) return false;
+    if (q && o.id.toLowerCase().indexOf(q) < 0 && o.customer.toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+  list.sort(function (a, b) {
+    var rank = { high: 0, watch: 1, normal: 2 };
+    if (rank[a.alert] !== rank[b.alert]) return rank[a.alert] - rank[b.alert];
+    return b.openHours - a.openHours;
+  });
+  renderOrders(list);
+}
+
+function tickClock() {
+  document.getElementById('clock').innerHTML =
+    new Date().toLocaleString('en-US', { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+function load() {
+  Promise.all([
+    fetch('orders/api/summary').then(function (r) { return r.json(); }),
+    fetch('orders/api/orders').then(function (r) { return r.json(); })
+  ]).then(function (res) {
+    var summary = res[0];
+    allOrders = res[1].orders;
+    renderKpis(summary);
+    renderDonut(summary);
+    renderAging(summary);
+    renderCustomers(summary);
+    applyFilters();
+  }).catch(function (e) {
+    document.getElementById('orders-body').innerHTML =
+      '<tr><td colspan="9" class="muted" style="padding:24px;text-align:center">Could not load data: ' + e + '</td></tr>';
+  });
+}
+
+['f-status', 'f-reason', 'f-alert'].forEach(function (id) {
+  document.getElementById(id).addEventListener('change', applyFilters);
+});
+document.getElementById('f-search').addEventListener('input', applyFilters);
+document.getElementById('refresh').addEventListener('click', load);
+
+tickClock();
+setInterval(tickClock, 30000);
+load();
+</script>
+</body>
+</html>

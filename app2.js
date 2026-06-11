@@ -1,10 +1,18 @@
 const express = require('express');
 const axios = require('axios');
+const path = require('path');
 require('dotenv').config();
 
 const app = express();
 
 app.use(express.json());
+
+/* === Order Fulfillment Dashboard === */
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/orders', require('./routes/orders'));
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'dashboard.html'));
+});
 
 const PLAID_BASE_URL = 'https://sandbox.plaid.com';
 
